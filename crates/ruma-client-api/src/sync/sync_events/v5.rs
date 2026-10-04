@@ -273,6 +273,14 @@ pub mod request {
         )]
         pub sticky_events: StickyEvents,
 
+        /// Configure the presence extension (`im.mxg.presence`, unstable).
+        #[serde(
+            default,
+            skip_serializing_if = "Presence::is_empty",
+            rename = "im.mxg.presence"
+        )]
+        pub presence: Presence,
+
         /// Extensions may add further fields to the list.
         #[serde(flatten)]
         other: BTreeMap<String, serde_json::Value>,
@@ -286,6 +294,7 @@ pub mod request {
                 && self.account_data.is_empty()
                 && self.receipts.is_empty()
                 && self.typing.is_empty()
+                && self.presence.is_empty()
                 && self.other.is_empty();
 
             #[cfg(feature = "unstable-msc4308")]
@@ -545,6 +554,22 @@ pub mod request {
         /// Whether all fields are empty or `None`.
         pub fn is_empty(&self) -> bool {
             self.enabled.is_none() && self.limit.is_none()
+        }
+    }
+
+    /// Presence extension (`im.mxg.presence`, unstable).
+    #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
+    #[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
+    pub struct Presence {
+        /// Activate or deactivate this extension.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub enabled: Option<bool>,
+    }
+
+    impl Presence {
+        /// Whether all fields are empty or `None`.
+        pub fn is_empty(&self) -> bool {
+            self.enabled.is_none()
         }
     }
 
@@ -830,6 +855,14 @@ pub mod response {
         #[serde(default, skip_serializing_if = "Typing::is_empty")]
         pub typing: Typing,
 
+        /// Presence extension response (`im.mxg.presence`, unstable).
+        #[serde(
+            default,
+            skip_serializing_if = "Presence::is_empty",
+            rename = "im.mxg.presence"
+        )]
+        pub presence: Presence,
+
         /// Thread subscriptions extension response.
         #[cfg(feature = "unstable-msc4308")]
         #[serde(
@@ -867,7 +900,8 @@ pub mod response {
                 && self.e2ee.is_empty()
                 && self.account_data.is_empty()
                 && self.receipts.is_empty()
-                && self.typing.is_empty();
+                && self.typing.is_empty()
+                && self.presence.is_empty();
 
             #[cfg(feature = "unstable-msc4308")]
             {
@@ -1059,6 +1093,22 @@ pub mod response {
         /// Whether all fields are empty or `None`.
         pub fn is_empty(&self) -> bool {
             self.subscribed.is_empty() && self.unsubscribed.is_empty() && self.prev_batch.is_none()
+        }
+    }
+
+    /// Presence extension response (`im.mxg.presence`, unstable).
+    #[derive(Clone, Debug, Default, Serialize, Deserialize)]
+    #[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
+    pub struct Presence {
+        /// `m.presence` events, in the shape of the `/sync` v2 presence section.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        pub events: Vec<Raw<ruma_events::presence::PresenceEvent>>,
+    }
+
+    impl Presence {
+        /// Whether there are no events.
+        pub fn is_empty(&self) -> bool {
+            self.events.is_empty()
         }
     }
 
