@@ -220,6 +220,20 @@ pub mod request {
 
         /// The maximum number of timeline events to return per room.
         pub timeline_limit: UInt,
+
+        /// Start each room's timeline at its newest message (`im.mxg.timeline_from_message`, unstable).
+        ///
+        /// Of the `timeline_limit` latest events, a room described afresh (new to the connection, or
+        /// with a gap) leaves out those before its newest message. A room list can then ask for enough
+        /// events to reach a message without holding the ones before it: in a bridged chat the newest
+        /// events are reactions and delivery statuses, which a client keeps out of a timeline that does
+        /// not hold the message they relate to.
+        #[serde(
+            rename = "im.mxg.timeline_from_message",
+            default,
+            skip_serializing_if = "ruma_common::serde::is_default"
+        )]
+        pub timeline_from_message: bool,
     }
 
     /// Sliding sync request extensions (see [`super::Request::extensions`]).
@@ -1154,6 +1168,26 @@ mod tests {
 
         let entry = ExtensionRoomConfig::Room(owned_room_id!("!foo:bar.baz"));
         assert_eq!(serde_json::to_string(&entry).unwrap().as_str(), r#""!foo:bar.baz""#);
+    }
+
+    #[test]
+    fn list_timeline_from_message_serde() {
+        use serde_json::json;
+
+        use super::request::ListConfig;
+
+        let config: ListConfig = serde_json::from_value(json!({
+            "timeline_limit": 10,
+            "im.mxg.timeline_from_message": true,
+        }))
+        .unwrap();
+        assert!(config.timeline_from_message);
+        assert_eq!(serde_json::to_value(&config).unwrap()["im.mxg.timeline_from_message"], json!(true));
+
+        // Off unless asked for, and not sent when off.
+        let plain: ListConfig = serde_json::from_value(json!({ "timeline_limit": 1 })).unwrap();
+        assert!(!plain.timeline_from_message);
+        assert!(serde_json::to_value(&plain).unwrap().get("im.mxg.timeline_from_message").is_none());
     }
 
     #[test]
