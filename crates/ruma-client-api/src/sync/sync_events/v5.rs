@@ -773,6 +773,14 @@ pub mod response {
         #[serde(skip_serializing_if = "Option::is_none")]
         pub bump_stamp: Option<UInt>,
 
+        /// The room's newest message, for a room list's preview (`im.mxg.preview`, unstable).
+        ///
+        /// Sent when the room's timeline in this response does not include it, so that a list can ask
+        /// for one event per room without rooms whose newest event is a reaction or a delivery status
+        /// losing their preview. It is the event the server ordered the list by (`bump_stamp`).
+        #[serde(rename = "im.mxg.preview", skip_serializing_if = "Option::is_none")]
+        pub preview: Option<Raw<AnySyncTimelineEvent>>,
+
         /// Heroes of the room.
         #[serde(skip_serializing_if = "Option::is_none")]
         pub heroes: Option<Heroes>,
@@ -1146,6 +1154,33 @@ mod tests {
 
         let entry = ExtensionRoomConfig::Room(owned_room_id!("!foo:bar.baz"));
         assert_eq!(serde_json::to_string(&entry).unwrap().as_str(), r#""!foo:bar.baz""#);
+    }
+
+    #[test]
+    fn room_preview_serde() {
+        use ruma_common::serde::Raw;
+        use serde_json::json;
+
+        use super::response::Room;
+
+        let event = json!({
+            "type": "m.room.message",
+            "event_id": "$preview",
+            "sender": "@alice:bar.baz",
+            "origin_server_ts": 1,
+            "content": { "msgtype": "m.text", "body": "hi" },
+        });
+        let mut room = Room::new();
+        room.preview = Some(Raw::from_json(serde_json::value::to_raw_value(&event).unwrap()));
+
+        let serialized = serde_json::to_value(&room).unwrap();
+        assert_eq!(serialized["im.mxg.preview"], event);
+
+        let back: Room = serde_json::from_value(serialized).unwrap();
+        assert_eq!(back.preview.unwrap().get_field::<String>("event_id").unwrap().as_deref(), Some("$preview"));
+
+        // Absent unless the server sends one.
+        assert!(serde_json::to_value(Room::new()).unwrap().get("im.mxg.preview").is_none());
     }
 
     #[test]
