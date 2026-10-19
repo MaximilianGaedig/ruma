@@ -2,7 +2,7 @@
 //!
 //! [MXC URI]: https://spec.matrix.org/v1.19/client-server-api/#matrix-content-mxc-uris
 
-use std::{fmt, num::NonZeroU8};
+use std::{fmt, num::NonZeroU16};
 
 use ruma_identifiers_validation::{error::MxcUriError, mxc_uri::validate};
 use ruma_macros::IdDst;
@@ -64,7 +64,7 @@ impl MxcUri {
 
     // convenience method for calling validate(self)
     #[inline(always)]
-    fn extract_slash_idx(&self) -> Result<NonZeroU8> {
+    fn extract_slash_idx(&self) -> Result<NonZeroU16> {
         validate(self.as_str())
     }
 }
@@ -163,5 +163,27 @@ mod tests {
                 media_id: "1234id"
             })
         );
+    }
+
+    #[test]
+    fn parse_mxc_uri_valid_very_long_server_name() {
+        let server_name = "A".repeat(250);
+        let uri = format!("mxc://{}/1", server_name);
+        let mxc = <&MxcUri>::from(uri.as_str());
+
+        assert!(mxc.is_valid());
+        let Mxc { server_name: mxc_server_name, media_id: mxc_media_id } = mxc.parts().unwrap();
+        assert_eq!(*mxc_server_name, server_name);
+        assert_eq!(mxc_media_id, "1");
+    }
+
+    #[test]
+    fn parse_mxc_uri_invalid_too_long_server_name() {
+        let server_name = "A".repeat(265);
+        let uri = format!("mxc://{}/1", server_name);
+        let mxc = <&MxcUri>::from(uri.as_str());
+
+        assert!(!mxc.is_valid());
+        let _ = mxc.parts().unwrap_err();
     }
 }
