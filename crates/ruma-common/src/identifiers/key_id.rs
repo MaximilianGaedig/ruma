@@ -248,7 +248,6 @@ mod tests {
     #[test]
     fn empty_algorithm_fails_to_parse() {
         let error = DeviceKeyId::parse_ref(":MYDEVICE").expect_err("Should fail to parse");
-        // Weirdly, this also reports MissingColon
-        assert_matches!(error, Error::MissingColon);
+        assert_matches!(error, Error::Empty);
     }
 }
