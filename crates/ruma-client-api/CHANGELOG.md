@@ -7,6 +7,10 @@ Breaking changes:
 - `UiaaInfo`s field `auth_error` from `Option<StandardErrorBody>` to `Option<Box<StandardErrorBody>>`
   (this saves a couple bytes when the field is not set, and gets rid of a default-warn clippy
   lint that was showing up in ruma-client and matrix-sdk)
+- `dehydrated_device::get_events::unstable` is replaced by two modules. `unstable_v2` matches the
+  current state of MSC3814: it uses `GET` with the batch token in the `from` query parameter,
+  and the response omits `next_batch` once there are no more events. `unstable_v1` keeps the
+  previous `POST` definition.
 
 Bug fixes:
 
@@ -22,6 +26,7 @@ Improvements:
 - `profile::get_profile` is now using `ruma_common::profile::UserProfile` for its underlying data
   storage.
 - Add support for MSC4262 (Profile Updates Sliding Sync Extension).
+- Add the unstable `membership::is_joined` endpoint from MSC4502, behind `unstable-msc4502`.
 - Added new `unstable-compat-lax-syncv5-deser` feature, which allows the `name` and `avatar` fields
   for rooms and hero users to be ignored during deserialization if they have an invalid format.
 - Route the MSC4133 extended profile field endpoints (`set_profile_field`, `get_profile_field`,
@@ -37,6 +42,7 @@ Improvements:
 - The `Profiles` sliding sync extension response data is wrapped in a `users` field instead of
   being decoded directly. The profile updates now use a `UserProfileUpdate` enum to signal if the
   profile changed or should be dropped.
+- Updated support for unstable MSC4388 with new `txn_id` field on update requests.
 
 ## 0.24.0
 
